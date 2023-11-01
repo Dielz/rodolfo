@@ -1,18 +1,59 @@
 {
-  "name": "rodolfo",
-  "productName": "rodolfo",
-  "description": "My Electron application description",
-  "keywords": [],
-  "main": "./main.js",
+  "name": "tron-forge",
+  "productName": "tron-forge",
   "version": "1.0.0",
-  "author": "user",
+  "description": "My Electron application description",
+  "main": "src/index.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
+    "lint": "echo \"No linting configured\""
+  },
+  "keywords": [],
+  "author": "MT IT",
+  "license": "MIT",
+  "config": {
+    "forge": {
+      "packagerConfig": {},
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "tron_forge"
+          }
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {}
+        },
+        {
+          "name": "@electron-forge/maker-rpm",
+          "config": {}
+        }
+      ]
+    }
   },
   "dependencies": {
-    "dotenv": "16.3.1"
+    "dotenv": "^16.3.1",
+    "electron-squirrel-startup": "^1.0.0",
+    "google-tts-api": "^2.0.2",
+    "openai": "^4.14.2"
   },
   "devDependencies": {
-    "electron": "26.2.2"
+    "@electron-forge/cli": "^6.0.0-beta.50",
+    "@electron-forge/maker-deb": "^6.0.0-beta.50",
+    "@electron-forge/maker-rpm": "^6.0.0-beta.50",
+    "@electron-forge/maker-squirrel": "^6.0.0-beta.50",
+    "@electron-forge/maker-zip": "^6.0.0-beta.50",
+    "devtron": "^1.4.0",
+    "electron": "8.0.2"
   }
 }
