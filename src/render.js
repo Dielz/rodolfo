@@ -1,20 +1,35 @@
-const whisper = require('whisper-node-ts');
+//const whisper = require('whisper-node-ts');
+const openai = require("openai");
+//const googleTTS = require('@google-cloud/text-to-speech');
+var path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
+
+// const configuration = new openai. configuration({
+//   apiKey: process.env.OPENIA_KEY,
+
+// });
+
+const openaiApi = new openai.OpenAI({
+  apiKey: process.env.OPENIA_KEY,
+  dangerouslyAllowBrowser: true,
+
+});
+
+// const whisperOptions = {
+//   modelName: "base",                   // default
+//   // modelPath: "/custom/path/to/model.bin", // use model in a custom directory
+//   whisperOptions: {
+//     gen_file_txt: false,      // outputs .txt file
+//     gen_file_subtitle: false, // outputs .srt file
+//     gen_file_vtt: false,      // outputs .vtt file
+//     timestamp_size: 10,       // amount of dialogue per timestamp pair
+//     word_timestamps: true     // timestamp for every word
+//   }
+// }
 
 
-const whisperOptions = {
-  modelName: "base",                   // default
-  // modelPath: "/custom/path/to/model.bin", // use model in a custom directory
-  whisperOptions: {
-    gen_file_txt: false,      // outputs .txt file
-    gen_file_subtitle: false, // outputs .srt file
-    gen_file_vtt: false,      // outputs .vtt file
-    timestamp_size: 10,       // amount of dialogue per timestamp pair
-    word_timestamps: true     // timestamp for every word
-  }
-}
-
-
-console.log(whisper);
+//console.log(process.env.OPENIA_KEY);
+//console.log(openai);
 
 let rec = null;
 let audioStream = null;
@@ -66,11 +81,30 @@ function uploadSoundData(blob) {
 
 async function transcript(blob) {
 
-  const url = URL.createObjectURL(blob);
+  // const url = URL.createObjectURL(blob);
 
-  const transcript = await whisper(url, whisperOptions);
+  //const transcript = await whisper(url, whisperOptions);
 
-  document.getElementById("output").innerHTML = JSON.stringify(transcript);
+
+  const transcript = await openaiApi.audio.transcriptions.create({
+    model: 'whisper-1',
+    file: new File([blob], 'audio.wav')
+  }); //.transcribe("whisper-1", url)
+
+
+//   const completion = await  openaiApi.createCompletion({
+//     model: "text-davinci-003",
+//     prompt: `Que tu respuesta sea breve y corta y nada de codigo o caracteres illegible y solo responde preguntas relacionadas a la navidad, en caso de no ser una pregunta o un tema relacionado a la navidad, responde con "No estoy autorizado a responder temas fuera de la navidad, pero aqui te dejo un chiste navideño" y procedes a dar un chiste navideño. ${transcript.text}`,
+//     temperature: 0.7,
+//     max_tokens: 256,
+//     top_p: 1,
+//     frequency_penalty: 0,
+//     presence_penalty: 0,
+
+// });
+
+
+  document.getElementById("output").innerHTML = transcript.text//completion.data.choices[0];//JSON.stringify(transcript);
 }
 
 function sendToWhisper(blob) {
