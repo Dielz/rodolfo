@@ -1,108 +1,122 @@
-const { desktopCapturer, remote } = require('electron');
-
-const { writeFile } = require('fs');
-
-const { dialog, Menu } = remote;
-
-// Global state
-let mediaRecorder; // MediaRecorder instance to capture footage
-const recordedChunks = [];
-
-// Buttons
-const videoElement = document.querySelector('video');
-
-const startBtn = document.getElementById('startBtn');
-startBtn.onclick = e => {
-  mediaRecorder.start();
-  startBtn.classList.add('is-danger');
-  startBtn.innerText = 'Recording';
-};
-
-const stopBtn = document.getElementById('stopBtn');
-
-stopBtn.onclick = e => {
-  mediaRecorder.stop();
-  startBtn.classList.remove('is-danger');
-  startBtn.innerText = 'Start';
-};
-
-const videoSelectBtn = document.getElementById('videoSelectBtn');
-videoSelectBtn.onclick = getVideoSources;
-
-// Get the available video sources
-async function getVideoSources() {
-  const inputSources = await desktopCapturer.getSources({
-    types: ['window', 'screen']
-  });
-
-  const videoOptionsMenu = Menu.buildFromTemplate(
-    inputSources.map(source => {
-      return {
-        label: source.name,
-        click: () => selectSource(source)
-      };
-    })
-  );
+const whisper = require('whisper-node-ts');
 
 
-  videoOptionsMenu.popup();
+const whisperOptions = {
+  modelName: "base",                   // default
+  // modelPath: "/custom/path/to/model.bin", // use model in a custom directory
+  whisperOptions: {
+    gen_file_txt: false,      // outputs .txt file
+    gen_file_subtitle: false, // outputs .srt file
+    gen_file_vtt: false,      // outputs .vtt file
+    timestamp_size: 10,       // amount of dialogue per timestamp pair
+    word_timestamps: true     // timestamp for every word
+  }
 }
 
-// Change the videoSource window to record
-async function selectSource(source) {
 
-  videoSelectBtn.innerText = source.name;
+console.log(whisper);
 
-  const constraints = {
-    audio: false,
-    video: {
-      mandatory: {
-        chromeMediaSource: 'desktop',
-        chromeMediaSourceId: source.id
-      }
+let rec = null;
+let audioStream = null;
+
+const recordButton = document.getElementById("recordButton");
+const transcribeButton = document.getElementById("transcribeButton");
+
+recordButton.addEventListener("click", startRecording);
+transcribeButton.addEventListener("click", transcribeText);
+
+function startRecording() {
+
+  let constraints = { audio: true, video: false }
+
+  recordButton.disabled = true;
+  transcribeButton.disabled = false;
+
+  navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
+    const audioContext = new window.AudioContext();
+    audioStream = stream;
+    const input = audioContext.createMediaStreamSource(stream);
+    rec = new Recorder(input, { numChannels: 1 })
+    rec.record();
+
+    document.getElementById("output").innerHTML = "Recording started..."
+  }).catch(function (err) {
+    recordButton.disabled = false;
+    transcribeButton.disabled = true;
+  });
+}
+
+function transcribeText() {
+  document.getElementById("output").innerHTML = "Converting audio to text..."
+  transcribeButton.disabled = true;
+  recordButton.disabled = false;
+  rec.stop();
+  audioStream.getAudioTracks()[0].stop();
+
+
+  rec.exportWAV(uploadSoundData);
+}
+
+function uploadSoundData(blob) {
+
+  // sendToWhisper(blob);
+  // replayBlob(blob);
+  transcript(blob);
+}
+
+async function transcript(blob) {
+
+  const url = URL.createObjectURL(blob);
+
+  const transcript = await whisper(url, whisperOptions);
+
+  document.getElementById("output").innerHTML = JSON.stringify(transcript);
+}
+
+function sendToWhisper(blob) {
+  const filename = "sound-file-" + new Date().getTime() + ".wav";
+  const formData = new FormData();
+  formData.append("audio_data", blob, filename);
+
+  fetch('http://localhost:3000/notes', {
+    method: 'POST',
+    body: formData
+  }).then(async result => {
+    document.getElementById("output").innerHTML = await result.text();
+  }).catch(error => {
+    document.getElementById("output").innerHTML = "An error occurred: " + error;
+  })
+}
+
+function replayBlob(blob) {
+  var blobURL = window.URL.createObjectURL(blob);
+  var audio0 = new Audio(blobURL);
+  audio0.play();
+}
+
+function getAudioContext() {
+  if (!window.AudioContext) {
+    if (!window.webkitAudioContext) {
+      alert("Your browser does not support any AudioContext and cannot play back this audio.");
+      return;
     }
-  };
-
-  // Create a Stream
-  const stream = await navigator.mediaDevices
-    .getUserMedia(constraints);
-
-  // Preview the source in a video element
-  videoElement.srcObject = stream;
-  videoElement.play();
-
-  // Create the Media Recorder
-  const options = { mimeType: 'video/webm; codecs=vp9' };
-  mediaRecorder = new MediaRecorder(stream, options);
-
-  // Register Event Handlers
-  mediaRecorder.ondataavailable = handleDataAvailable;
-  mediaRecorder.onstop = handleStop;
-
-  // Updates the UI
-}
-
-// Captures all recorded chunks
-function handleDataAvailable(e) {
-  console.log('video data available');
-  recordedChunks.push(e.data);
-}
-
-// Saves the video file on stop
-async function handleStop(e) {
-  const blob = new Blob(recordedChunks, {
-    type: 'video/webm; codecs=vp9'
-  });
-
-  const buffer = Buffer.from(await blob.arrayBuffer());
-
-  const { filePath } = await dialog.showSaveDialog({
-    buttonLabel: 'Save video',
-    defaultPath: `vid-${Date.now()}.webm`
-  });
-
-  if (filePath) {
-    writeFile(filePath, buffer, () => console.log('video saved successfully!'));
+    window.AudioContext = window.webkitAudioContext;
   }
 
+  context = new AudioContext();
+
+  return context;
+}
+
+// Play the loaded file
+function play(buf) {
+  // Create a source node from the buffer
+  const context = getAudioContext();
+
+  var source = context.createBufferSource();
+  source.buffer = buf;
+  // Connect to the final output node (the speakers)
+  source.connect(context.destination);
+  // Play immediately
+  source.start(0);
 }
