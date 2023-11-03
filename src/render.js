@@ -4,11 +4,6 @@ const openai = require("openai");
 var path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 
-// const configuration = new openai. configuration({
-//   apiKey: process.env.OPENIA_KEY,
-
-// });
-
 const openaiApi = new openai.OpenAI({
   apiKey: process.env.OPENIA_KEY,
   dangerouslyAllowBrowser: true,
@@ -26,10 +21,6 @@ const openaiApi = new openai.OpenAI({
 //     word_timestamps: true     // timestamp for every word
 //   }
 // }
-
-
-//console.log(process.env.OPENIA_KEY);
-//console.log(openai);
 
 let rec = null;
 let audioStream = null;
@@ -89,68 +80,76 @@ async function transcript(blob) {
   const transcript = await openaiApi.audio.transcriptions.create({
     model: 'whisper-1',
     file: new File([blob], 'audio.wav')
-  }); //.transcribe("whisper-1", url)
+  });
 
+  document.getElementById("question").innerHTML = transcript.text;
+  
+  const completion = await openaiApi.completions.create({
+    model: 'gpt-3.5-turbo-instruct',
+    prompt: `Que tu respuesta sea breve y corta y nada de codigo o caracteres illegible 
+    y solo responde preguntas relacionadas a la navidad, en caso de no ser una pregunta o 
+    un tema relacionado a la navidad, responde con "No estoy autorizado a responder temas 
+    fuera de la navidad, pero aqui te dejo un chiste navideño" y procedes a dar un chiste 
+    navideño. "${transcript.text}"`,
+    temperature: 0.7,
+    max_tokens: 256,
+    top_p: 1,
+    frequency_penalty: 0,
+    presence_penalty: 0,
 
-//   const completion = await  openaiApi.createCompletion({
-//     model: "text-davinci-003",
-//     prompt: `Que tu respuesta sea breve y corta y nada de codigo o caracteres illegible y solo responde preguntas relacionadas a la navidad, en caso de no ser una pregunta o un tema relacionado a la navidad, responde con "No estoy autorizado a responder temas fuera de la navidad, pero aqui te dejo un chiste navideño" y procedes a dar un chiste navideño. ${transcript.text}`,
-//     temperature: 0.7,
-//     max_tokens: 256,
-//     top_p: 1,
-//     frequency_penalty: 0,
-//     presence_penalty: 0,
+  });
 
-// });
+  //console.log(completion)
 
-
-  document.getElementById("output").innerHTML = transcript.text//completion.data.choices[0];//JSON.stringify(transcript);
+  document.getElementById("output").innerHTML = // transcript.text
+  completion.choices[0].text;
+  //JSON.stringify(transcript);
 }
 
-function sendToWhisper(blob) {
-  const filename = "sound-file-" + new Date().getTime() + ".wav";
-  const formData = new FormData();
-  formData.append("audio_data", blob, filename);
+// function sendToWhisper(blob) {
+//   const filename = "sound-file-" + new Date().getTime() + ".wav";
+//   const formData = new FormData();
+//   formData.append("audio_data", blob, filename);
 
-  fetch('http://localhost:3000/notes', {
-    method: 'POST',
-    body: formData
-  }).then(async result => {
-    document.getElementById("output").innerHTML = await result.text();
-  }).catch(error => {
-    document.getElementById("output").innerHTML = "An error occurred: " + error;
-  })
-}
+//   fetch('http://localhost:3000/notes', {
+//     method: 'POST',
+//     body: formData
+//   }).then(async result => {
+//     document.getElementById("output").innerHTML = await result.text();
+//   }).catch(error => {
+//     document.getElementById("output").innerHTML = "An error occurred: " + error;
+//   })
+// }
 
-function replayBlob(blob) {
-  var blobURL = window.URL.createObjectURL(blob);
-  var audio0 = new Audio(blobURL);
-  audio0.play();
-}
+// function replayBlob(blob) {
+//   var blobURL = window.URL.createObjectURL(blob);
+//   var audio0 = new Audio(blobURL);
+//   audio0.play();
+// }
 
-function getAudioContext() {
-  if (!window.AudioContext) {
-    if (!window.webkitAudioContext) {
-      alert("Your browser does not support any AudioContext and cannot play back this audio.");
-      return;
-    }
-    window.AudioContext = window.webkitAudioContext;
-  }
+// function getAudioContext() {
+//   if (!window.AudioContext) {
+//     if (!window.webkitAudioContext) {
+//       alert("Your browser does not support any AudioContext and cannot play back this audio.");
+//       return;
+//     }
+//     window.AudioContext = window.webkitAudioContext;
+//   }
 
-  context = new AudioContext();
+//   context = new AudioContext();
 
-  return context;
-}
+//   return context;
+// }
 
-// Play the loaded file
-function play(buf) {
-  // Create a source node from the buffer
-  const context = getAudioContext();
+// // Play the loaded file
+// function play(buf) {
+//   // Create a source node from the buffer
+//   const context = getAudioContext();
 
-  var source = context.createBufferSource();
-  source.buffer = buf;
-  // Connect to the final output node (the speakers)
-  source.connect(context.destination);
-  // Play immediately
-  source.start(0);
-}
+//   var source = context.createBufferSource();
+//   source.buffer = buf;
+//   // Connect to the final output node (the speakers)
+//   source.connect(context.destination);
+//   // Play immediately
+//   source.start(0);
+// }
