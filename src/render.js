@@ -1,13 +1,13 @@
-//const whisper = require('whisper-node-ts');
 const openai = require("openai");
-//const googleTTS = require('@google-cloud/text-to-speech');
+const googleTTS = require('@google-cloud/text-to-speech');
+const fs = require('fs');
+const util = require('util');
 var path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 
 const openaiApi = new openai.OpenAI({
   apiKey: process.env.OPENIA_KEY,
   dangerouslyAllowBrowser: true,
-
 });
 
 // const whisperOptions = {
@@ -59,24 +59,14 @@ function transcribeText() {
   rec.stop();
   audioStream.getAudioTracks()[0].stop();
 
-
   rec.exportWAV(uploadSoundData);
 }
 
 function uploadSoundData(blob) {
-
-  // sendToWhisper(blob);
-  // replayBlob(blob);
   transcript(blob);
 }
 
 async function transcript(blob) {
-
-  // const url = URL.createObjectURL(blob);
-
-  //const transcript = await whisper(url, whisperOptions);
-
-
   const transcript = await openaiApi.audio.transcriptions.create({
     model: 'whisper-1',
     file: new File([blob], 'audio.wav')
@@ -96,7 +86,6 @@ async function transcript(blob) {
     top_p: 1,
     frequency_penalty: 0,
     presence_penalty: 0,
-
   });
 
   //console.log(completion)
@@ -145,11 +134,3 @@ async function transcript(blob) {
 // function play(buf) {
 //   // Create a source node from the buffer
 //   const context = getAudioContext();
-
-//   var source = context.createBufferSource();
-//   source.buffer = buf;
-//   // Connect to the final output node (the speakers)
-//   source.connect(context.destination);
-//   // Play immediately
-//   source.start(0);
-// }
