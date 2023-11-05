@@ -42,10 +42,11 @@
     }
   },
   "dependencies": {
-    "dotenv": "^16.3.1",
-    "electron-squirrel-startup": "^1.0.0",
     "@google-cloud/storage": "^6.10.0",
     "@google-cloud/text-to-speech": "^4.2.2",
+    "dotenv": "^16.3.1",
+    "electron-squirrel-startup": "^1.0.0",
+    "microsoft-cognitiveservices-speech-sdk": "1.32.0",
     "openai": "^4.14.2",
     "whisper-node-ts": "0.0.16"
   },

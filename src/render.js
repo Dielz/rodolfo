@@ -1,10 +1,16 @@
 const openai = require("openai");
-const googleTTS = require('@google-cloud/text-to-speech');
+//const googleTTS = require('@google-cloud/text-to-speech');
+const sdk = require('microsoft-cognitiveservices-speech-sdk');
 const fs = require('fs');
 const util = require('util');
 var path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 
+
+
+const speechConfig = sdk.SpeechConfig.fromSubscription(process.env.SPEECH_KEY, process.env.SPEECH_REGION);
+speechConfig.speechRecognitionLanguage = "es-DO";
+speechConfig.speechSynthesisVoiceName = "es-DO-RamonaNeural";
 
 //console.log(process.env.OPENAI_KEY);
 const openaiApi = new openai.OpenAI({
@@ -12,7 +18,8 @@ const openaiApi = new openai.OpenAI({
   dangerouslyAllowBrowser: true,
 });
 
-const gtts = new googleTTS.TextToSpeechClient();
+// // google -------------------------------------------
+//const gtts = new googleTTS.TextToSpeechClient();
 
 let rec = null;
 let audioStream = null;
@@ -70,9 +77,9 @@ async function transcript(blob) {
   const completion = await openaiApi.completions.create({
     model: 'gpt-3.5-turbo-instruct',
     prompt: `Que tu respuesta sea breve y corta y nada de código o caracteres ilegibles y
-     solo responde preguntas relacionadas a la navidad, en caso de no ser una pregunta o 
-     un tema relacionado a la navidad, responde con "No estoy autorizado a responder temas 
-     fuera de la navidad, pero aquí te dejo un chiste navideño" y procedes a dar un chiste navideño. "${transcript.text}"`,
+     que todas tus respuestas estan orientada hacia la navidad y en caso de no poder orientarla a la navidad o 
+     un tema relacionado a la navidad, responde con "No puedo responder nada fuera de la navidad, pero si te 
+     puedo dar un dato navideño" y procedes a dar un dato sobre la navidad o un chiste navideño muy gracioso y utiliza gerga dominicana. "${transcript.text}"`,
     temperature: 0.7,
     max_tokens: 256,
     top_p: 1,
@@ -81,29 +88,52 @@ async function transcript(blob) {
   });
 
   document.getElementById("output").innerHTML = completion.choices[0].text;
+  // // Google ------------------------------------------------------------------------------------------------------------------------
+  // const request = {
+  //   audioConfig: {
+  //     audioEncoding: "LINEAR16",
+  //     effectsProfileId: ["headphone-class-device"],
+  //     pitch: 0,
+  //     speakingRate: 1,
+  //   },
+  //   input: { text: completion.choices[0].text },
+  //   voice: {
+  //     languageCode: "es-US",
+  //     name: "es-US-Studio-B",
+  //   },
+  // };
 
-  const request = {
-    audioConfig: {
-      audioEncoding: "LINEAR16",
-      effectsProfileId: ["headphone-class-device"],
-      pitch: 0,
-      speakingRate: 1,
+  // // Performs the text-to-speech request
+  // const [response] = await gtts.synthesizeSpeech(request);
+
+
+  // microsoft ------------------------------------------------------------------------------------------------------------------------
+
+  var synthesizer = new sdk.SpeechSynthesizer(speechConfig);
+
+  const response = synthesizer.speakTextAsync(completion.choices[0].text,
+    function (result) {
+      if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
+        console.log("synthesis finished.");
+      } else {
+        console.error("Speech synthesis canceled, " + result.errorDetails +
+          "\nDid you set the speech resource key and region values?");
+      }
+      synthesizer.close();
+      synthesizer = null;
     },
-    input: { text: completion.choices[0].text },
-    voice: {
-      languageCode: "es-US",
-      name: "es-US-Studio-B",
-    },
-  };
-
-  // Performs the text-to-speech request
-  const [response] = await gtts.synthesizeSpeech(request);
-
-  play(response.audioContent);
+    function (err) {
+      console.trace("err - " + err);
+      synthesizer.close();
+      synthesizer = null;
+    });
+  
+  play(response);
 }
 
-// Reproducir el audio sintetizado
+//Reproducir el audio sintetizado
 function play(audioContent) {
   const audio = new Audio(URL.createObjectURL(new Blob([audioContent], { type: 'audio/mp3' })));
   audio.play();
 }
+
